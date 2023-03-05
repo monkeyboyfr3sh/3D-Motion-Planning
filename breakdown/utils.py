@@ -220,13 +220,14 @@ def pickup_goal(grid, start, callback):
     fig = plt.gcf()
     fig.colorbar(im)
     fig.canvas.mpl_connect('pick_event', callback)
-    plt.gca().set_title("Choose the goal location\n(close the figure to continue)", fontsize=18)
+    plt.gca().set_title("Choose the goal location\n", fontsize=18)
     plt.show()
 
 def draw_path(grid, start, stop, path):
     """
     Pick up goal from the 2.5D grid map
     """
+    plt.clf()
     im = plt.imshow(grid, cmap='gray_r', picker=True)
     plt.axis((0, grid.shape[1], 0, grid.shape[0]))
     plt.xlabel("EAST")
@@ -240,7 +241,7 @@ def draw_path(grid, start, stop, path):
 
     fig = plt.gcf()
     fig.colorbar(im)
-    plt.gca().set_title("Choose the goal location\n(close the figure to continue)", fontsize=18)
+    # plt.gca().set_title("Choose the goal location\n(close the figure to continue)", fontsize=18)
     plt.show()
 
 

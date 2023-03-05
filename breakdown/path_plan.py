@@ -70,7 +70,7 @@ class MotionPlanning:
             lon = float(lon_str.strip().split(' ')[1])
             print("Map home location: ({}, {})".format(lat, lon))
 
-    def plan_path(self):
+    def interactive_plan_path(self):
         self.flight_state = States.PLANNING
 
         self.get_map_home()
@@ -92,13 +92,30 @@ class MotionPlanning:
 
         print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
         # starting point on the grid
-        grid_start = self.local_to_grid(local_position)
-        alt_start = int(max(TARGET_ALTITUDE, grid_start[2] + 1, grid[grid_start[0], grid_start[1]] + 1))
-        grid_start = grid_start[0], grid_start[1], alt_start
+        self.grid_start = self.local_to_grid(local_position)
+        alt_start = int(max(TARGET_ALTITUDE, self.grid_start[2] + 1, grid[self.grid_start[0], self.grid_start[1]] + 1))
+        self.grid_start = self.grid_start[0], self.grid_start[1], alt_start
 
         # visualize grid: interavtive goal pick up
-        self.temporary_scatter = pickup_goal(grid, grid_start, self.pick_goal)
+        # self.temporary_scatter = pickup_goal(grid, self.grid_start, self.pick_goal)
+        self.temporary_scatter = pickup_goal(grid, self.grid_start, self.live_path_plan)
 
+    def live_path_plan(self, event):
+        evt = event.mouseevent
+        east = int(evt.xdata)
+        north = int(evt.ydata)
+        alt = self.map_grid[north, east]
+        # self.interactive_goal = local_to_global(self.grid_to_local((north, east, alt)), self.global_home)
+        self.interactive_goal = self.grid_to_local((north, east, alt))
+
+        if self.temporary_scatter is not None:
+            self.temporary_scatter.remove()
+        fig = event.artist.figure
+        self.temporary_scatter = fig.gca().scatter(east, north, marker='o', c='g')
+        fig.canvas.draw()
+        self.path_plan()
+
+    def path_plan(self):
         goal = self.interactive_goal
         if len(goal) < 3:
             goal = (goal[0], goal[1], 0)
@@ -107,22 +124,20 @@ class MotionPlanning:
         goal_north, goal_east, goal_alt = goal_grid
         grid_goal = (goal_north,
                     goal_east,
-                    int(max(grid[goal_north, goal_east] + 1, TARGET_ALTITUDE, goal_alt + 1)))
+                    int(max(self.map_grid[goal_north, goal_east] + 1, TARGET_ALTITUDE, goal_alt + 1)))
 
-        print('Start and Goal location', grid_start, grid_goal)
-
+        print('Start and Goal location', self.grid_start, grid_goal)
         print("Searching path...")
-        path = a_star(grid, heuristic, grid_start, grid_goal, TARGET_ALTITUDE)
+        path = a_star(self.map_grid, heuristic, self.grid_start, grid_goal, TARGET_ALTITUDE)
         path = path_prune(path, collinear_points)
         print("3D Pruned Path:", path)
-        path = path_simplify(grid, path)
+        path = path_simplify(self.map_grid, path)
         print("Path found!")
         print(path)
         self.path = path
         waypoints = self.path_to_waypoints(path)
         self.waypoints = waypoints
-        draw_path(grid,grid_start,grid_goal,path)
-
+        draw_path(self.map_grid,self.grid_start,grid_goal,path)
 
     def path_to_waypoints(self, path):
         # Convert path to waypoints
@@ -138,4 +153,4 @@ class MotionPlanning:
     
 if __name__ == "__main__":
     mission = MotionPlanning()
-    mission.plan_path()
+    mission.interactive_plan_path()
